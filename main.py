@@ -99,13 +99,13 @@ def create_pomodoro_timer(task_id:str, duration:int = 25):
 
 
 @app.post("/pomodoro/{task_id}/stop")
-def stop_pomodoro_timer(task_id:str):
+def stop_pomodoro_timer(task_id: str):
     for pomodoro in pomodoro_timers:
         if pomodoro.taskid == task_id:
             pomodoro_timers.remove(pomodoro)
 
     for pomodoro in pomodoro_sessions:
-        if pomodoro.taskid == task_id:
+        if pomodoro.taskid == task_id and not pomodoro.completed:
             pomodoro.completed = True
             return "Successfully stopped pomodoro session."
     raise HTTPException(status_code=404, detail="No Timer of such ID found.")
@@ -113,16 +113,16 @@ def stop_pomodoro_timer(task_id:str):
 
 @app.get("/pomodoro/stats")
 def get_pomodoro_stats():
-    completed_sessions = []
+    total_time = 0
     stats = {}
+
     for session in pomodoro_sessions:
         if session.completed:
-            completed_sessions.append(session)
+            duration = (session.end_time - session.start_time).total_seconds() / 60
+            total_time += duration
+            if session.taskid in stats:
+                stats[session.taskid] += 1
+            else:
+                stats[session.taskid] = 1
 
-    for session in completed_sessions:
-        if session.taskid in stats:
-            stats[session.taskiid] += 1
-        else:
-            stats[session.taskid] = 1
-    
-    return {"completed_sessions": stats}
+    return {"completed_sessions": stats, "total_time_in_minutes": total_time}
